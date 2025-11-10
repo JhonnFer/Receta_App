@@ -26,6 +26,8 @@ export class AuthUseCase {
    */
   async registrar(email: string, password: string, rol: "chef" | "usuario") {
     try {
+      console.log("📝 Registrando usuario:", { email, rol });
+
       // PASO 1: Crear usuario en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -36,9 +38,11 @@ export class AuthUseCase {
       if (authError) throw authError;
       if (!authData.user) throw new Error("No se pudo crear el usuario");
 
+      console.log("✅ Usuario creado en Auth con ID:", authData.user.id);
+
       // PASO 2: Guardar información adicional en tabla usuarios
       // Usamos upsert (insert + update) para manejar casos donde el usuario ya existe
-      const { error: upsertError } = await supabase
+      const { data: userData, error: upsertError } = await supabase
         .from("usuarios")
         .upsert(
           {
@@ -49,10 +53,15 @@ export class AuthUseCase {
           {
             onConflict: "id",         // Si el ID ya existe, actualiza
           }
-        );
+        )
+        .select();
 
-      if (upsertError) throw upsertError;
+      if (upsertError) {
+        console.error("❌ Error al guardar usuario:", upsertError);
+        throw upsertError;
+      }
 
+      console.log("✅ Usuario guardado en tabla 'usuarios':", userData);
       return { success: true, user: authData.user };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -108,16 +117,27 @@ export class AuthUseCase {
       if (!user) return null;
 
       // PASO 2: Obtener información completa de tabla usuarios
+      // Usamos .maybeSingle() en lugar de .single() para evitar error si no encuentra
       const { data, error } = await supabase
         .from("usuarios")
         .select("*")
         .eq("id", user.id)
-        .single();  // Esperamos un solo resultado
+        .maybeSingle();  // Retorna el resultado o null (sin error)
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error al obtener usuario de BD:", error);
+        throw error;
+      }
+
+      if (!data) {
+        console.log("⚠️ Usuario en Auth pero no en tabla usuarios:", user.id);
+        return null;
+      }
+
+      console.log("✅ Usuario obtenido:", data);
       return data as Usuario;
     } catch (error) {
-      console.log("Error al obtener usuario:", error);
+      console.error("❌ Error al obtener usuario:", error);
       return null;
     }
   }

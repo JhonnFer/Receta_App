@@ -1,5 +1,5 @@
-import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/src/data/services/supabaseClient";
+import * as ImagePicker from "expo-image-picker";
 import { Receta } from "../../models/Receta";
 
 /**
@@ -90,10 +90,15 @@ export class RecipesUseCase {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error de Supabase al crear receta:", error);
+        throw error;
+      }
 
+      console.log("✅ Receta creada exitosamente:", data);
       return { success: true, receta: data };
     } catch (error: any) {
+      console.error("❌ Error al crear receta:", error.message, error);
       return { success: false, error: error.message };
     }
   }
