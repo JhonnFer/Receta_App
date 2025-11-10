@@ -1,4 +1,5 @@
 import { supabase } from "@/src/data/services/supabaseClient";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { Receta } from "../../models/Receta";
 
@@ -158,42 +159,61 @@ export class RecipesUseCase {
    * Subir imagen al Storage de Supabase
    *
    * PROCESO:
-   * 1. Convertir URI local a Blob
-   * 2. Generar nombre único
-   * 3. Subir a bucket "recetas-fotos"
-   * 4. Obtener URL pública
+   * 1. Leer archivo de imagen usando expo-file-system
+   * 2. Convertir base64 a Uint8Array
+   * 3. Generar nombre único
+   * 4. Subir a bucket "recetas-fotos"
+   * 5. Obtener URL pública
    *
-   * @param uri - URI local de la imagen
+   * @param uri - URI local de la imagen (file://)
    * @returns URL pública de la imagen subida
    */
   private async subirImagen(uri: string): Promise<string> {
     try {
-      // PASO 1: Convertir imagen a Blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      console.log("📷 Iniciando carga de imagen:", uri);
 
-      // PASO 2: Generar nombre único
+      // PASO 1: Leer archivo como base64 usando expo-file-system
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: "base64",
+      });
+
+      // PASO 2: Convertir base64 a Uint8Array
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // PASO 3: Generar nombre único
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
 
-      // PASO 3: Subir a Supabase Storage
+      console.log("📤 Subiendo archivo:", fileName);
+
+      // PASO 4: Subir a Supabase Storage
       const { data, error } = await supabase.storage
         .from("recetas-fotos")
-        .upload(fileName, blob, {
+        .upload(fileName, bytes, {
           contentType: "image/jpeg",
           cacheControl: "3600",  // Cache de 1 hora
           upsert: false,         // No sobrescribir si existe
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error al subir archivo a Storage:", error);
+        throw error;
+      }
 
-      // PASO 4: Obtener URL pública
+      console.log("✅ Archivo subido:", data.path);
+
+      // PASO 5: Obtener URL pública
       const {
         data: { publicUrl },
       } = supabase.storage.from("recetas-fotos").getPublicUrl(data.path);
 
+      console.log("🔗 URL pública generada:", publicUrl);
       return publicUrl;
     } catch (error) {
-      console.error("Error al subir imagen:", error);
+      console.error("❌ Error al subir imagen:", error);
       throw error;
     }
   }
