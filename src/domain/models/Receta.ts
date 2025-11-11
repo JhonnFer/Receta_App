@@ -12,3 +12,4 @@ export interface Receta {
   imagen_url?: string;     // URL opcional de la imagen
   created_at: string;      // ISO string de fecha de creación
 }
+

@@ -88,3 +88,4 @@ export function useAuth() {
     esChef: usuario?.rol === "chef", // Helper
   };
 }
+

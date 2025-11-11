@@ -111,29 +111,49 @@ export class RecipesUseCase {
    * @param titulo - Nuevo título
    * @param descripcion - Nueva descripción
    * @param ingredientes - Nuevos ingredientes
+   * @param imagenUri - Nueva URI de imagen (opcional)
    */
   async actualizarReceta(
     id: string,
     titulo: string,
     descripcion: string,
-    ingredientes: string[]
+    ingredientes: string[],
+    imagenUri?: string
   ) {
     try {
+      let imagenUrl: string | undefined;
+
+      // PASO 1: Subir imagen si existe
+      if (imagenUri) {
+        imagenUrl = await this.subirImagen(imagenUri);
+      }
+
+      // PASO 2: Preparar objeto de actualización
+      const updateData: any = {
+        titulo,
+        descripcion,
+        ingredientes,
+      };
+
+      // Solo agregar imagen_url si se proporcionó una nueva imagen
+      if (imagenUrl) {
+        updateData.imagen_url = imagenUrl;
+      }
+
+      // PASO 3: Actualizar en base de datos
       const { data, error } = await supabase
         .from("recetas")
-        .update({
-          titulo,
-          descripcion,
-          ingredientes,
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
 
+      console.log("✅ Receta actualizada exitosamente:", data);
       return { success: true, receta: data };
     } catch (error: any) {
+      console.error("❌ Error al actualizar receta:", error.message, error);
       return { success: false, error: error.message };
     }
   }
@@ -185,7 +205,9 @@ export class RecipesUseCase {
       }
 
       // PASO 3: Generar nombre único
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+      const fileName = `${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(7)}.jpg`;
 
       console.log("📤 Subiendo archivo:", fileName);
 
@@ -194,8 +216,8 @@ export class RecipesUseCase {
         .from("recetas-fotos")
         .upload(fileName, bytes, {
           contentType: "image/jpeg",
-          cacheControl: "3600",  // Cache de 1 hora
-          upsert: false,         // No sobrescribir si existe
+          cacheControl: "3600", // Cache de 1 hora
+          upsert: false, // No sobrescribir si existe
         });
 
       if (error) {
@@ -230,7 +252,8 @@ export class RecipesUseCase {
   async seleccionarImagen(): Promise<string | null> {
     try {
       // PASO 1: Pedir permisos
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
         alert("Necesitamos permisos para acceder a tus fotos");
@@ -240,9 +263,9 @@ export class RecipesUseCase {
       // PASO 2: Abrir galería
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: "images",
-        allowsEditing: true,  // Permitir recortar
-        aspect: [4, 3],       // Proporción 4:3
-        quality: 0.8,         // Calidad 80% (balance tamaño/calidad)
+        allowsEditing: true, // Permitir recortar
+        aspect: [4, 3], // Proporción 4:3
+        quality: 0.8, // Calidad 80% (balance tamaño/calidad)
       });
 
       if (!result.canceled) {
@@ -252,6 +275,46 @@ export class RecipesUseCase {
       return null;
     } catch (error) {
       console.error("Error al seleccionar imagen:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Tomar foto con la cámara
+   *
+   * PROCESO:
+   * 1. Pedir permisos de cámara
+   * 2. Abrir la cámara
+   * 3. Permitir captura y retoque
+   * 4. Retornar URI local de la foto
+   */
+  async tomarFoto(): Promise<string | null> {
+    try {
+      // PASO 1: Pedir permisos de cámara
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== "granted") {
+        alert("Necesitamos permisos para acceder a la cámara");
+        return null;
+      }
+
+      // PASO 2: Abrir cámara
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: "images",
+        allowsEditing: true, // Permitir recortar la foto
+        aspect: [4, 3], // Proporción 4:3
+        quality: 0.8, // Calidad 80%
+      });
+
+      if (!result.canceled) {
+        console.log("✅ Foto capturada:", result.assets[0].uri);
+        return result.assets[0].uri;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("❌ Error al tomar foto:", error);
+      alert("Error al acceder a la cámara");
       return null;
     }
   }
