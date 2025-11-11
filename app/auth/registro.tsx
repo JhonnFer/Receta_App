@@ -29,6 +29,7 @@ export default function RegistroScreen() {
   const router = useRouter();
 
   const handleRegistro = async () => {
+    console.log("Rol seleccionado antes de registrar:", rolSeleccionado);
     // VALIDACIÓN 1: Campos vacíos
     if (!email || !password) {
       Alert.alert("Error", "Completa todos los campos");

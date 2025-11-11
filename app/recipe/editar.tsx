@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +19,7 @@ import { colors, fontSize, spacing } from "../../src/styles/theme";
 export default function EditarRecetaScreen() {
   const { id } = useLocalSearchParams();
   const { usuario } = useAuth();
-  const { recetas, actualizar } = useRecipes();
+  const { recetas, actualizar, seleccionarImagen, tomarFoto } = useRecipes();
   const router = useRouter();
 
   const receta = recetas.find((r) => r.id === id);
@@ -27,6 +28,7 @@ export default function EditarRecetaScreen() {
   const [descripcion, setDescripcion] = useState("");
   const [ingrediente, setIngrediente] = useState("");
   const [ingredientes, setIngredientes] = useState<string[]>([]);
+  const [imagenUri, setImagenUri] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
   // Cargar datos de la receta al iniciar
@@ -74,6 +76,20 @@ export default function EditarRecetaScreen() {
     setIngredientes(ingredientes.filter((_, i) => i !== index));
   };
 
+  const handleSeleccionarImagen = async () => {
+    const uri = await seleccionarImagen();
+    if (uri) {
+      setImagenUri(uri);
+    }
+  };
+
+  const handleTomarFoto = async () => {
+    const uri = await tomarFoto();
+    if (uri) {
+      setImagenUri(uri);
+    }
+  };
+
   const handleGuardar = async () => {
     if (!titulo || !descripcion || ingredientes.length === 0) {
       Alert.alert("Error", "Completa todos los campos");
@@ -85,7 +101,8 @@ export default function EditarRecetaScreen() {
       receta.id,
       titulo,
       descripcion,
-      ingredientes
+      ingredientes,
+      imagenUri || undefined
     );
     setCargando(false);
 
@@ -156,9 +173,60 @@ export default function EditarRecetaScreen() {
           ))}
         </View>
 
-        <Text style={styles.notaImagen}>
-          💡 Nota: La imagen no se puede cambiar por ahora
-        </Text>
+        <Text style={globalStyles.subtitle}>Imagen de la Receta:</Text>
+
+        {imagenUri ? (
+          <View style={styles.contenedorImagen}>
+            <Image source={{ uri: imagenUri }} style={styles.imagen} />
+            <View style={styles.contenedorBotones}>
+              <TouchableOpacity
+                style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+                onPress={handleTomarFoto}
+              >
+                <Text style={globalStyles.buttonText}>📸 Tomar Foto</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+                onPress={handleSeleccionarImagen}
+              >
+                <Text style={globalStyles.buttonText}>📷 Galería</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : receta.imagen_url ? (
+          <View style={styles.contenedorImagen}>
+            <Image source={{ uri: receta.imagen_url }} style={styles.imagen} />
+            <View style={styles.contenedorBotones}>
+              <TouchableOpacity
+                style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+                onPress={handleTomarFoto}
+              >
+                <Text style={globalStyles.buttonText}>📸 Tomar Foto</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+                onPress={handleSeleccionarImagen}
+              >
+                <Text style={globalStyles.buttonText}>📷 Galería</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.contenedorBotones}>
+            <TouchableOpacity
+              style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+              onPress={handleTomarFoto}
+            >
+              <Text style={globalStyles.buttonText}>📸 Tomar Foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+              onPress={handleSeleccionarImagen}
+            >
+              <Text style={globalStyles.buttonText}>📷 Galería</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[
@@ -226,11 +294,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: "bold",
   },
-  notaImagen: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
+  contenedorImagen: {
     marginBottom: spacing.lg,
-    fontStyle: "italic",
+    gap: spacing.md,
+  },
+  imagen: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+  },
+  contenedorBotones: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   botonGuardar: {
     padding: spacing.lg,

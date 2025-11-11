@@ -86,13 +86,15 @@ export function useRecipes() {
     id: string,
     titulo: string,
     descripcion: string,
-    ingredientes: string[]
+    ingredientes: string[],
+    imagenUri?: string
   ) => {
     const resultado = await recipesUseCase.actualizarReceta(
       id,
       titulo,
       descripcion,
-      ingredientes
+      ingredientes,
+      imagenUri
     );
 
     if (resultado.success) {
@@ -122,6 +124,13 @@ export function useRecipes() {
     return await recipesUseCase.seleccionarImagen();
   };
 
+  /**
+   * Tomar foto con la cámara
+   */
+  const tomarFoto = async () => {
+    return await recipesUseCase.tomarFoto();
+  };
+
   return {
     recetas,
     cargando,
@@ -131,5 +140,6 @@ export function useRecipes() {
     actualizar,
     eliminar,
     seleccionarImagen,
+    tomarFoto,
   };
 }

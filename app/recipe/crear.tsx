@@ -23,7 +23,7 @@ import {
 
 export default function CrearRecetaScreen() {
   const { usuario, esChef } = useAuth();
-  const { crear, seleccionarImagen } = useRecipes();
+  const { crear, seleccionarImagen, tomarFoto } = useRecipes();
   const router = useRouter();
 
   const [titulo, setTitulo] = useState("");
@@ -46,6 +46,13 @@ export default function CrearRecetaScreen() {
 
   const handleSeleccionarImagen = async () => {
     const uri = await seleccionarImagen();
+    if (uri) {
+      setImagenUri(uri);
+    }
+  };
+
+  const handleTomarFoto = async () => {
+    const uri = await tomarFoto();
     if (uri) {
       setImagenUri(uri);
     }
@@ -159,14 +166,21 @@ export default function CrearRecetaScreen() {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={[globalStyles.button, globalStyles.buttonSecondary]}
-          onPress={handleSeleccionarImagen}
-        >
-          <Text style={globalStyles.buttonText}>
-            {imagenUri ? "📷 Cambiar Foto" : "📷 Agregar Foto"}
-          </Text>
-        </TouchableOpacity>
+        <Text style={globalStyles.subtitle}>Foto de la Receta:</Text>
+        <View style={styles.contenedorBotones}>
+          <TouchableOpacity
+            style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+            onPress={handleTomarFoto}
+          >
+            <Text style={globalStyles.buttonText}>📸 Tomar Foto</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[globalStyles.button, globalStyles.buttonSecondary, { flex: 1 }]}
+            onPress={handleSeleccionarImagen}
+          >
+            <Text style={globalStyles.buttonText}>📷 Galería</Text>
+          </TouchableOpacity>
+        </View>
 
         {imagenUri && (
           <Image source={{ uri: imagenUri }} style={styles.vistaPrevia} />
@@ -237,6 +251,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.lg,
     fontWeight: "bold",
+  },
+  contenedorBotones: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   vistaPrevia: {
     width: "100%",
